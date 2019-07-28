@@ -135,7 +135,7 @@ contract FixedRateDefi {
 
     function acceptContract() ensureContractNotAccepted public {
         // pull in dai from investor
-        if (!cDaiContract.transferFrom(msg.sender, cDaiContractAddress, principal)) {
+        if (!cDaiContract.transferFrom(msg.sender, address(this), principal)) {
             revert();
         }
 
