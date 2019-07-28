@@ -11,7 +11,7 @@ contract cDAI {
 
     function balanceOf(address tokenOwner) public view returns (uint balance);
 
-    function exchangeRateCurrent() public view returns (uint);
+    function exchangeRateCurrent() public returns (uint);
 }
 
 contract DAI {
@@ -25,6 +25,23 @@ contract DAI {
 }
 
 contract FixedRateDefi {
+
+    event Accepted(
+        address investor,
+        uint acceptTIme
+    );
+    event Setup(
+        address marketMaker,
+        uint principal,
+        uint interestCollateral,
+        uint length
+    );
+    event Settled(
+        uint investorFinalBalance
+    );
+    event MarketMakerWithdraw(
+        uint marketMakerFinalBalance
+    );
 
     address public cDaiContractAddress = address(0xF5DCe57282A584D2746FaF1593d3121Fcac444dC);
     address public daiContractAddress = address(0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359);
@@ -117,12 +134,12 @@ contract FixedRateDefi {
         return 0;
     }
 
-    function marketMakerBalance() public view returns (uint) {
+    function marketMakerBalance() public returns (uint) {
         return compoundBalance() - investorBalance();
     }
 
     // balance held by this contract on compound
-    function compoundBalance() public view returns (uint) {
+    function compoundBalance() public returns (uint) {
         return (cDaiContract.exchangeRateCurrent() * cDaiContract.balanceOf(address(this))) / 1e18;
     }
 
@@ -134,6 +151,9 @@ contract FixedRateDefi {
     }
 
     function acceptContract() ensureContractNotAccepted public {
+        acceptTime = now;
+        investor = address(msg.sender);
+        emit Accepted(investor, acceptTime);
         // pull in dai from investor
         if (!daiContract.transferFrom(msg.sender, address(this), principal)) {
             revert();
@@ -143,14 +163,14 @@ contract FixedRateDefi {
         if (cDaiContract.mint(principal) != 0) {
             revert();
         }
-        acceptTime = now;
     }
 
     // allows investor to settle the contract and get back their original deposit + interest earned
     function investorSettle() public ensureOnlyInvestor ensureContractAccepted {
         settleTime = now;
-        // pull everything out of compound
-        if (cDaiContract.redeemUnderlying(compoundBalance()) != 0) {
+        emit Settled(investorBalance());
+        // pull enough from compound to pay investor if there is anything to pull
+        if (investorBalance() > 0 && cDaiContract.redeemUnderlying(investorBalance()) != 0) {
             revert();
         }
         // transfer investor what they are owed
@@ -161,6 +181,7 @@ contract FixedRateDefi {
 
     // withdraws marketMaker funds if the contract has expired or settled
     function marketMakerWithdraw() public ensureOnlyMarketMaker ensureExpiredOrSettled {
+        emit MarketMakerWithdraw(marketMakerBalance());
         // pull everything out of compound
         if (cDaiContract.redeemUnderlying(compoundBalance()) != 0) {
             revert();
@@ -189,6 +210,8 @@ contract FixedRateDefi {
         principal = _principal;
         interestCollateral = _interestCollateral;
         length = _length;
+
+        emit Setup(marketMaker, principal, interestCollateral, length);
     }
 
     // included for development purposes to get funds out
