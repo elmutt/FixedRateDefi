@@ -11,7 +11,7 @@ contract cDAI {
 
     function balanceOf(address tokenOwner) public view returns (uint balance);
 
-    function exchangeRateCurrent() public returns (uint);
+    function exchangeRateCurrent() public view returns (uint);
 }
 
 contract DAI {
@@ -122,7 +122,7 @@ contract FixedRateDefi {
     }
 
     // balance held by this contract on compound
-    function compoundBalance() public returns (uint) {
+    function compoundBalance() public view returns (uint) {
         return (cDaiContract.exchangeRateCurrent() * cDaiContract.balanceOf(address(this))) / 1e18;
     }
 
