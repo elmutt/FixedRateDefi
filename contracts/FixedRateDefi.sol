@@ -117,7 +117,7 @@ contract FixedRateDefi {
         return 0;
     }
 
-    function marketMakerBalance() public returns (uint) {
+    function marketMakerBalance() public view returns (uint) {
         return compoundBalance() - investorBalance();
     }
 
